@@ -79,7 +79,7 @@ jobs:
         run: uv sync --dev
 
       - name: Generate gRPC stubs
-        run: python -m grpc_tools.protoc --proto_path=./src/cline_core/proto --python_out=./src/cline_core/proto --grpc_python_out=./src/cline_core/proto src/cline_core/proto/**/*.proto
+        run: uv run python -m grpc_tools.protoc --proto_path=./src/cline_core/proto --python_out=./src/cline_core/proto --grpc_python_out=./src/cline_core/proto src/cline_core/proto/**/*.proto
 
       - name: Build | Create Distribution Artifacts
         run: uv build --wheel --sdist
