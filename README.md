@@ -12,7 +12,7 @@ npm install -g cline
 Install this library
 
 ```bash
-pip install cline
+pip install cline_core
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ pip install cline
 ### Basic Cline Instance Management
 
 ```python
-from cline import ClineInstance
+from cline_core import ClineInstance
 
 with ClineInstance.with_available_ports() as instance:
     print(f"Instance started: {instance.address}")
