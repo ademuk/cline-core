@@ -8,17 +8,22 @@ authors = [
 ]
 requires-python = ">=3.12"
 
-[build-system]
-requires = ["uv>=0.4.0", "grpcio-tools>=1.64.0"]
-
 [dependency-groups]
 dev = [
     "build",
     "grpcio-tools>=1.64.0",
     "grpcio>=1.64.0",
+    "mypy-protobuf",
     "pytest>=9.0.1",
     "python-semantic-release>=10.5.2",
 ]
+
+[build-system]
+requires = ["hatchling", "grpcio-tools"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.hooks.custom]
+path = "build.py"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
