@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.5 (2025-11-19)
+
+### Bug Fixes
+
+- **build**: Uv run python -m grpc_tools.protoc-e .
+  ([`bbb767e`](https://github.com/ademuk/cline-core/commit/bbb767e492b33a57a495d4e23f951b6a73f0e15d))
+
+
 ## v0.1.4 (2025-11-19)
 
 ### Bug Fixes
