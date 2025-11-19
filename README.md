@@ -1,4 +1,4 @@
-# Cline Python
+# Cline Core
 
 A python library to run cline core
 
