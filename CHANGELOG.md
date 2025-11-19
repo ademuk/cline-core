@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.1.2 (2025-11-19)
+
+### Bug Fixes
+
+- **build**: Fix to include built grpc stubs
+  ([`64ab569`](https://github.com/ademuk/cline-core/commit/64ab569ebe911a15f80ca93a97ced1d9a81deb84))
+
+### Chores
+
+- Remove redundant __version__
+  ([`1bec10f`](https://github.com/ademuk/cline-core/commit/1bec10faa8b5264694135ce9e43b1a2b9d8e19e4))
+
+
 ## v0.1.1 (2025-11-19)
 
 ### Bug Fixes
