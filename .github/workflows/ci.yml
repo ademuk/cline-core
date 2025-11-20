@@ -63,13 +63,6 @@ jobs:
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
 
-      - name: Publish | Upload to GitHub Release Assets
-        uses: python-semantic-release/publish-action@v10.5.2
-        if: steps.release.outputs.released == 'true'
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release.outputs.tag }}
-
       - name: Setup | Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -90,6 +83,13 @@ jobs:
           name: distribution-artifacts
           path: dist
           if-no-files-found: error
+
+      - name: Publish | Upload to GitHub Release Assets
+        uses: python-semantic-release/publish-action@v10.5.2
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
 
     outputs:
       released: ${{ steps.release.outputs.released || 'false' }}
