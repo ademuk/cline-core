@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.6 (2025-11-20)
+
+### Bug Fixes
+
+- **build**: Upload gh release last
+  ([`cc1122e`](https://github.com/ademuk/cline-core/commit/cc1122e51294da75495596e21ec5873c7a79e41e))
+
+
 ## v0.1.5 (2025-11-19)
 
 ### Bug Fixes
