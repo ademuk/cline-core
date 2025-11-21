@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.1.9 (2025-11-21)
+
+### Bug Fixes
+
+- **build**: Fix bad proto package
+  ([`306dc56`](https://github.com/ademuk/cline-core/commit/306dc56b5e3a3dcfb01ee3e17652b5f5dea2a414))
+
+### Chores
+
+- **docs**: Add task monitoring to example
+  ([`4033ce2`](https://github.com/ademuk/cline-core/commit/4033ce2d9d0362f7683f5b306b2c1c94ed5f8a3f))
+
+
 ## v0.1.8 (2025-11-20)
 
 ### Bug Fixes
