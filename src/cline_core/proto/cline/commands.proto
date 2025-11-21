@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package cline_core;
+package cline;
 
 import "cline/common.proto";
 
 option go_package = "github.com/cline/grpc-go/cline";
 option java_multiple_files = true;
-option java_package = "bot.cline_core.proto";
+option java_package = "bot.cline.proto";
 
 // Service for running IDE commands, for example context menu actions,
 // commands, etc.
@@ -28,5 +28,5 @@ message CommandContext {
   // The language identifier for the current file.
   optional string language = 3;
   // Any diagnostic problems for the current file.
-  repeated cline_core.Diagnostic diagnostics = 4;
+  repeated cline.Diagnostic diagnostics = 4;
 }

@@ -117,7 +117,7 @@ wheels = [
 
 [[package]]
 name = "cline-core"
-version = "0.1.2"
+version = "0.1.7"
 source = { virtual = "." }
 
 [package.dev-dependencies]

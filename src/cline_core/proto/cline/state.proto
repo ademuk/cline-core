@@ -1,5 +1,5 @@
 syntax = "proto3";
-package cline_core;
+package cline;
 
 import "cline/browser.proto";
 import "cline/common.proto";
@@ -7,7 +7,7 @@ import "cline/models.proto";
 
 option go_package = "github.com/cline/grpc-go/cline";
 option java_multiple_files = true;
-option java_package = "bot.cline_core.proto";
+option java_package = "bot.cline.proto";
 
 service StateService {
   rpc getLatestState(EmptyRequest) returns (State);

@@ -6,7 +6,7 @@ import "cline/common.proto";
 
 option go_package = "github.com/cline/grpc-go/host";
 option java_multiple_files = true;
-option java_package = "bot.cline_core.host.proto";
+option java_package = "bot.cline.host.proto";
 
 // Provides methods for working with workspaces/projects.
 service WorkspaceService {
@@ -59,11 +59,11 @@ message SaveOpenDocumentIfDirtyResponse {
 }
 
 message GetDiagnosticsRequest {
-  optional cline_core.Metadata metadata = 1;
+  optional cline.Metadata metadata = 1;
 }
 
 message GetDiagnosticsResponse {
-  repeated cline_core.FileDiagnostics file_diagnostics = 1;
+  repeated cline.FileDiagnostics file_diagnostics = 1;
 }
 
 // Request for host-side workspace search (files/folders) used by mentions autocomplete
