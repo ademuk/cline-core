@@ -2,11 +2,8 @@ import asyncio
 import json
 import logging
 import signal
-from typing import Optional, Dict, Any, Callable
-import threading
-import time
+from typing import Optional, Dict, Any
 
-from cline_core import ClineInstance
 from cline_core.proto.cline.common_pb2 import Metadata
 from cline_core.proto.cline.state_pb2 import Settings, PlanActMode, AutoApprovalSettings, AutoApprovalActions
 from cline_core.proto.cline.state_pb2_grpc import StateServiceStub
@@ -46,183 +43,6 @@ class StreamCoordinator:
         # Clear processed messages for previous turn
         self.processed_messages = {k for k in self.processed_messages if not k.startswith(f"{self.conversation_turn_start_index}:")}
         self.conversation_turn_start_index = new_index
-
-class InputHandler:
-    """Equivalent of the Go NewInputHandler"""
-
-    def __init__(self, manager: 'ConversationManager', coordinator: StreamCoordinator, cancel_func: Callable[[], None]):
-        self.manager = manager
-        self.coordinator = coordinator
-        self.cancel_func = cancel_func
-        self.running = False
-        self.poll_interval = 0.5  # seconds
-
-    def start(self, cancel_event: asyncio.Event, err_chan: asyncio.Queue):
-        """Start the input handler polling loop"""
-        self.running = True
-
-        async def poll_loop():
-            try:
-                while self.running and not cancel_event.is_set():
-                    await self.poll_for_input()
-                    await asyncio.sleep(self.poll_interval)
-            except asyncio.CancelledError:
-                pass
-            except Exception as e:
-                await err_chan.put(e)
-
-        asyncio.create_task(poll_loop())
-
-    async def poll_for_input(self):
-        """Check if input is needed and handle it"""
-        try:
-            # Check if approval is needed
-            needs_approval, approval_msg = await self.manager.check_needs_approval()
-            if needs_approval:
-                self.coordinator.set_input_allowed(True)
-
-                # Check if auto-approval is enabled for this action
-                action_type = await self.get_action_type_from_message(approval_msg)
-                logger.info(f"Action type determined: {action_type}")
-
-                # HARDCODED AUTO-APPROVAL: Bypass broken Cline RPC auto-approval system
-                # Auto-approve common safe actions (equivalent to --auto-approve CLI flags)
-                auto_approve_actions = ['read_files', 'edit_files', 'execute_safe_commands']
-                if action_type in auto_approve_actions:
-                    # Auto-approve without prompting (this is more reliable than RPC)
-                    approved, feedback = True, ""
-                    logger.info(f"✓ Hardcoded auto-approved {action_type} (bypassing Cline RPC)")
-                else:
-                    logger.info(f"Auto-approval check failed for {action_type}, prompting user")
-                    # Prompt for approval
-                    approved, feedback = await self.prompt_for_approval(approval_msg)
-
-                self.coordinator.set_input_allowed(False)
-
-                # Send approval response
-                approve_str = "true" if approved else "false"
-                await self.manager.send_message("", [], [], approve_str, feedback)
-                await asyncio.sleep(1)  # Give system time to process
-                return
-
-            # Check if we can send a regular message
-            can_send = await self.manager.check_send_enabled()
-            if can_send:
-                self.coordinator.set_input_allowed(True)
-                message, should_send = await self.prompt_for_input()
-
-                if should_send:
-                    if handled := await self.handle_special_command(message):
-                        return
-
-                    await self.manager.send_message(message, [], [], "", "")
-                    await asyncio.sleep(1)  # Give system time to process
-
-                self.coordinator.set_input_allowed(False)
-            else:
-                self.coordinator.set_input_allowed(False)
-
-        except Exception as e:
-            logger.error(f"Input handler error: {e}")
-
-    async def prompt_for_approval(self, approval_msg: Dict[str, Any]) -> tuple[bool, str]:
-        """Prompt user for approval - simplified text-based version"""
-        # In a real implementation, you'd use a proper TUI library
-        print(f"\n🔧 Cline wants to use: {approval_msg.get('ask', 'unknown tool')}")
-        print(f"Details: {approval_msg.get('text', '')[:200]}...")
-
-        while True:
-            response = input("Approve? (y/n/auto) [y]: ").strip().lower()
-            if response in ['', 'y', 'yes']:
-                feedback = input("Any feedback? ").strip()
-                return True, feedback
-            elif response in ['n', 'no']:
-                feedback = input("Why not? ").strip()
-                return False, feedback
-            elif response == 'auto':
-                # Enable auto-approval for this action type
-                await self.enable_auto_approval(approval_msg)
-                return True, ""
-
-    async def prompt_for_input(self) -> tuple[str, bool]:
-        """Prompt user for message input"""
-        try:
-            message = input("\n💬 Cline: ").strip()
-            return message, len(message) > 0
-        except KeyboardInterrupt:
-            self.cancel_func()
-            return "", False
-
-    async def handle_special_command(self, message: str) -> bool:
-        """Handle special commands like /cancel, /mode switches"""
-        message = message.strip().lower()
-
-        if message == "/cancel":
-            print("Cancelling task...")
-            await self.manager.cancel_task()
-            return True
-        elif message == "/exit" or message == "/quit":
-            print("Exiting follow mode...")
-            self.cancel_func()
-            return True
-        elif message.startswith("/plan"):
-            remaining = message[5:].strip()
-            if remaining:
-                await self.manager.set_mode_and_send("plan", remaining, [], [])
-            else:
-                await self.manager.set_mode("plan")
-            return True
-        elif message.startswith("/act"):
-            remaining = message[4:].strip()
-            if remaining:
-                await self.manager.set_mode_and_send("act", remaining, [], [])
-            else:
-                await self.manager.set_mode("act")
-            return True
-
-        return False
-
-    async def get_action_type_from_message(self, approval_msg: Dict[str, Any]) -> Optional[str]:
-        """Determine the auto-approval action type from an approval message"""
-        ask_type = approval_msg.get('ask')
-
-        # For tool operations, parse the actual tool being used
-        if ask_type == 'tool':
-            tool_text = approval_msg.get('text', '')
-            if '"tool":"readFile"' in tool_text:
-                return 'read_files'
-            elif '"tool":"editedExistingFile"' in tool_text or '"tool":"newFileCreated"' in tool_text:
-                return 'edit_files'
-            else:
-                return 'edit_files'  # Default fallback
-
-        # Map other ask types to auto-approval actions
-        action_map = {
-            'command': 'execute_all_commands',
-            'browser_action_launch': 'use_browser',
-            'mcp_server_request': 'use_mcp'
-        }
-
-        return action_map.get(ask_type)
-
-    async def enable_auto_approval(self, approval_msg: Dict[str, Any]):
-        """Enable auto-approval for the given action type"""
-        ask_type = approval_msg.get('ask')
-
-        # Determine action based on ask type
-        action_map = {
-            'tool': 'edit_files',  # Simplified - would need better parsing
-            'command': 'execute_all_commands',
-            'browser_action_launch': 'use_browser',
-            'mcp_server_request': 'use_mcp'
-        }
-
-        action = action_map.get(ask_type)
-        if action:
-            await self.manager.update_auto_approval_action(action)
-            print(f"✓ Auto-approval enabled for {action}")
-        else:
-            print(f"⚠ Could not determine auto-approval action for {ask_type}")
 
 class ConversationManager:
     """Equivalent of the Go Manager struct for conversation handling"""
@@ -264,14 +84,20 @@ class ConversationManager:
             total_messages = await self.load_conversation_history()
             self.coordinator.set_conversation_turn_start_index(total_messages)
 
-            # Start input handler if interactive
+            # Poll for approvals automatically (no interactive input handler)
             cancel_event = asyncio.Event()
-            input_handler = None
-            input_task = None
+            async def approval_poller():
+                try:
+                    while not cancel_event.is_set():
+                        await self.poll_and_handle_approvals()
+                        await asyncio.sleep(0.5)
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    logger.error(f"Approval poller error: {e}")
+
             if interactive:
-                input_handler = InputHandler(self, self.coordinator, cancel_func)
-                err_chan = asyncio.Queue()
-                input_handler.start(cancel_event, err_chan)
+                asyncio.create_task(approval_poller())
 
             # Start state streaming
             completion_chan = asyncio.Queue()
@@ -408,7 +234,7 @@ class ConversationManager:
             )
 
             await asyncio.get_event_loop().run_in_executor(
-                None, self.task_stub.AskResponse, req
+                None, self.task_stub.askResponse, req
             )
 
         except Exception as e:
@@ -540,7 +366,9 @@ class ConversationManager:
             )
 
             state_data = json.loads(state_resp.state_json)
-            await self.process_state_update(state_data, completion_chan)
+            completion_found = await self.process_state_update(state_data, completion_chan)
+            if completion_found:
+                return  # Exit when completion is found
 
             # In a real implementation, you'd set up a streaming connection
             # For now, we'll poll periodically
@@ -557,13 +385,15 @@ class ConversationManager:
                 if 'mode' in state_data:
                     self.current_mode = state_data['mode']
 
-                await self.process_state_update(state_data, completion_chan)
+                completion_found = await self.process_state_update(state_data, completion_chan)
+                if completion_found:
+                    return  # Exit when completion is found
 
         except Exception as e:
             await err_chan.put(e)
 
-    async def process_state_update(self, state_data: Dict[str, Any], completion_chan: asyncio.Queue):
-        """Process state updates and handle messages"""
+    async def process_state_update(self, state_data: Dict[str, Any], completion_chan: asyncio.Queue) -> bool:
+        """Process state updates and handle messages. Returns True if completion found."""
         messages = state_data.get('clineMessages', [])
         start_index = self.coordinator.get_conversation_turn_start_index()
 
@@ -589,8 +419,7 @@ class ConversationManager:
                 # Mark turn as complete
                 self.coordinator.complete_turn(len(messages))
 
-        if found_completion:
-            await completion_chan.put(True)
+        return found_completion
 
     def should_display_message(self, msg: Dict[str, Any]) -> bool:
         """Determine if a message should be displayed"""
@@ -629,9 +458,57 @@ class ConversationManager:
         else:
             print(f"[{msg_type}:{say_type}] {text}")
 
-def new_input_handler(manager: ConversationManager, coordinator: StreamCoordinator, cancel_func: Callable[[], None]) -> InputHandler:
-    """Equivalent of NewInputHandler from Go"""
-    return InputHandler(manager, coordinator, cancel_func)
+    async def poll_and_handle_approvals(self):
+        """Poll for approvals and handle them automatically"""
+        try:
+            # Check if approval is needed
+            needs_approval, approval_msg = await self.check_needs_approval()
+            if needs_approval:
+                # Check if auto-approval is enabled for this action
+                action_type = self.get_action_type_from_message(approval_msg)
+                logger.info(f"Action type determined: {action_type}")
+
+                # HARDCODED AUTO-APPROVAL: Bypass Cline RPC auto-approval system
+                # Auto-approve common safe actions (equivalent to --auto-approve CLI flags)
+                auto_approve_actions = ['read_files', 'edit_files', 'execute_safe_commands']
+                if action_type in auto_approve_actions:
+                    # Auto-approve without prompting (this is more reliable than RPC)
+                    approved, feedback = True, ""
+                    logger.info(f"✓ Hardcoded auto-approved {action_type} (bypassing Cline RPC)")
+                else:
+                    # Return false for non-auto-approved actions (deny)
+                    approved, feedback = False, "action not auto-approved"
+                    logger.info(f"✗ Denied {action_type} (not auto-approved)")
+
+                # Send approval response
+                approve_str = "true" if approved else "false"
+                await self.send_message("", [], [], approve_str, feedback)
+                await asyncio.sleep(0.5)  # Give system time to process
+        except Exception as e:
+            logger.error(f"Approval handler error: {e}")
+
+    def get_action_type_from_message(self, approval_msg: Dict[str, Any]) -> Optional[str]:
+        """Determine the auto-approval action type from an approval message"""
+        ask_type = approval_msg.get('ask')
+
+        # For tool operations, parse the actual tool being used
+        if ask_type == 'tool':
+            tool_text = approval_msg.get('text', '')
+            if '"tool":"readFile"' in tool_text:
+                return 'read_files'
+            elif '"tool":"editedExistingFile"' in tool_text or '"tool":"newFileCreated"' in tool_text:
+                return 'edit_files'
+            else:
+                return 'edit_files'  # Default fallback
+
+        # Map other ask types to auto-approval actions
+        action_map = {
+            'command': 'execute_all_commands',
+            'browser_action_launch': 'use_browser',
+            'mcp_server_request': 'use_mcp'
+        }
+
+        return action_map.get(ask_type)
 
 async def follow_conversation(channel, instance_address: str, interactive: bool = True):
     """Main function equivalent to FollowConversation from Go"""
