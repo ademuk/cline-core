@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Adem Gaygusuz", email = "adem@ardweb.co.uk" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.8"
 
 [dependency-groups]
 dev = [

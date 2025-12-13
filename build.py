@@ -5,9 +5,10 @@ import glob
 import os
 import subprocess
 import sys
+from typing import List
 
 
-def run_command(command: list[str], cwd: str = None) -> int:
+def run_command(command: List[str], cwd: str = None) -> int:
     """Run a command and return the exit code."""
     print(f"Running: {' '.join(command)}")
     result = subprocess.run(command, cwd=cwd or os.getcwd())
