@@ -6,7 +6,7 @@ A python library to run cline core
 
 Install Cline CLI which includes Cline Core. For more info visit: https://cline.bot/cline-cli
 ```bash
-npm install -g cline
+RUN npm install -g cline@1.0.8
 ```
 
 Install this library

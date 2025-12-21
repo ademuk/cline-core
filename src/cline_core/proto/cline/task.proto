@@ -11,49 +11,49 @@ option java_package = "bot.cline.proto";
 
 service TaskService {
   // Cancels the currently running task
-  rpc cancelTask(cline.EmptyRequest) returns (cline.Empty);
+  rpc cancelTask(EmptyRequest) returns (Empty);
   // Cancels the currently running background command
-  rpc cancelBackgroundCommand(cline.EmptyRequest) returns (cline.Empty);
+  rpc cancelBackgroundCommand(EmptyRequest) returns (Empty);
   // Clears the current task
-  rpc clearTask(cline.EmptyRequest) returns (cline.Empty);
+  rpc clearTask(EmptyRequest) returns (Empty);
   // Gets the total size of all tasks
-  rpc getTotalTasksSize(cline.EmptyRequest) returns (cline.Int64);
+  rpc getTotalTasksSize(EmptyRequest) returns (Int64);
   // Deletes multiple tasks with the given IDs
-  rpc deleteTasksWithIds(cline.StringArrayRequest) returns (cline.Empty);
+  rpc deleteTasksWithIds(StringArrayRequest) returns (Empty);
   // Creates a new task with the given text and optional images
-  rpc newTask(NewTaskRequest) returns (cline.String);
+  rpc newTask(NewTaskRequest) returns (String);
   // Shows a task with the specified ID
-  rpc showTaskWithId(cline.StringRequest) returns (TaskResponse);
+  rpc showTaskWithId(StringRequest) returns (TaskResponse);
   // Exports a task with the given ID to markdown
-  rpc exportTaskWithId(cline.StringRequest) returns (cline.Empty);
+  rpc exportTaskWithId(StringRequest) returns (Empty);
   // Toggles the favorite status of a task
-  rpc toggleTaskFavorite(TaskFavoriteRequest) returns (cline.Empty);
+  rpc toggleTaskFavorite(TaskFavoriteRequest) returns (Empty);
   // Gets filtered task history
   rpc getTaskHistory(GetTaskHistoryRequest) returns (TaskHistoryArray);
   // Sends a response to a previous ask operation
-  rpc askResponse(AskResponseRequest) returns (cline.Empty);
+  rpc askResponse(AskResponseRequest) returns (Empty);
   // Records task feedback (thumbs up/down)
-  rpc taskFeedback(cline.StringRequest) returns (cline.Empty);
+  rpc taskFeedback(StringRequest) returns (Empty);
   // Shows task completion changes diff in a view
-  rpc taskCompletionViewChanges(cline.Int64Request) returns (cline.Empty);
+  rpc taskCompletionViewChanges(Int64Request) returns (Empty);
   // Executes a quick win task with command and title
-  rpc executeQuickWin(ExecuteQuickWinRequest) returns (cline.Empty);
+  rpc executeQuickWin(ExecuteQuickWinRequest) returns (Empty);
   // Deletes all task history
-  rpc deleteAllTaskHistory(cline.EmptyRequest) returns (DeleteAllTaskHistoryCount);
+  rpc deleteAllTaskHistory(EmptyRequest) returns (DeleteAllTaskHistoryCount);
 }
 
 // Request message for creating a new task
 message NewTaskRequest {
-  cline.Metadata metadata = 1;
+  Metadata metadata = 1;
   string text = 2;
   repeated string images = 3;
   repeated string files = 4;
-  optional cline.Settings task_settings = 5;
+  optional Settings task_settings = 5;
 }
 
 // Request message for toggling task favorite status
 message TaskFavoriteRequest {
-  cline.Metadata metadata = 1;
+  Metadata metadata = 1;
   string task_id = 2;
   bool is_favorited = 3;
 }
@@ -74,7 +74,7 @@ message TaskResponse {
 
 // Request for getting task history with filtering
 message GetTaskHistoryRequest {
-  cline.Metadata metadata = 1;
+  Metadata metadata = 1;
   bool favorites_only = 2;
   string search_query = 3;
   string sort_by = 4;
@@ -103,7 +103,7 @@ message TaskItem {
 
 // Request for ask response operation
 message AskResponseRequest {
-  cline.Metadata metadata = 1;
+  Metadata metadata = 1;
   string response_type = 2;
   string text = 3;
   repeated string images = 4;
@@ -112,7 +112,7 @@ message AskResponseRequest {
 
 // Request for executing a quick win task
 message ExecuteQuickWinRequest {
-  cline.Metadata metadata = 1;
+  Metadata metadata = 1;
   string command = 2;
   string title = 3;
 }
