@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v0.1.10 (2025-12-27)
+
+### Bug Fixes
+
+- Pipe cline-host and cline-core process output to /dev/null to prevent hanging
+  ([`e7b8bd5`](https://github.com/ademuk/cline-core/commit/e7b8bd5420e227347ae41d01333387a0a1711368))
+
+### Chores
+
+- **build**: Bump Cline version
+  ([`b6c3c92`](https://github.com/ademuk/cline-core/commit/b6c3c9238acb62ca6dcfb3007a4f40527a30b909))
+
+- **docs**: Add conversation follower
+  ([`58174a9`](https://github.com/ademuk/cline-core/commit/58174a991dfd772123d45fe8e56ac377d86373f8))
+
+- **docs**: Add conversation follower for example
+  ([`4a076f3`](https://github.com/ademuk/cline-core/commit/4a076f3d03c4a2abb9b7580006315fc0082a0c15))
+
+- **docs**: Bypass auto approve
+  ([`2a34721`](https://github.com/ademuk/cline-core/commit/2a34721024ec38f00180235259a3787594968e10))
+
+
 ## v0.1.9 (2025-11-21)
 
 ### Bug Fixes
