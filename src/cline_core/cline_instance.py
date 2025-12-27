@@ -71,8 +71,8 @@ class ClineInstance:
     def start(self) -> Instance:
         self.host_process = subprocess.Popen(
             ['cline-host', '--verbose', '--port', str(self.cline_host_port)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             text=True,
             cwd=self.cwd
         )
@@ -94,8 +94,8 @@ class ClineInstance:
                 "GRPC_VERBOSITY": "DEBUG",
                 "NODE_ENV": "development"
             },
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             text=True
         )
 
