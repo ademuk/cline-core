@@ -5,8 +5,15 @@ A python library to run cline core
 ## Installation
 
 Install Cline CLI which includes Cline Core. For more info visit: https://cline.bot/cline-cli
+
+**Global Installation (default):**
 ```bash
-RUN npm install -g cline@1.0.8
+npm install -g cline@1.0.8
+```
+
+**Local Installation (recommended):**
+```bash
+npm install cline@1.0.8
 ```
 
 Install this library
@@ -43,9 +50,30 @@ See `examples/example.py` for a complete example of creating and monitoring task
 - **stop()**: Terminates the processes
 - **wait_for_instance(timeout=30)**: Waits for instance lock in database
 - **is_running()**: Checks if processes are still running
-- **with_available_ports(cwd, config_path=None)**: Factory method for automatic port allocation
+- **with_available_ports(cwd=None, config_path=None, cline_path=None)**: Factory method for automatic port allocation
 
 Supports context manager protocol for automatic cleanup.
+
+#### Local Installation Support
+
+The library supports finding `cline-core.js` in multiple locations, in order of priority:
+
+1. **Keyword argument**: Pass `cline_path` to `with_available_ports()`
+   ```python
+   with ClineInstance.with_available_ports(cline_path="./node_modules/cline/cline-core.js") as instance:
+       # Use instance
+   ```
+
+2. **Environment variable**: Set `CLINE_CORE_PATH` environment variable
+   ```bash
+   export CLINE_CORE_PATH="./node_modules/cline/cline-core.js"
+   ```
+
+3. **PATH search**: If `cline` executable is found in PATH, searches for `cline-core.js` relative to it
+
+4. **Global npm fallback**: Searches global node_modules (original behavior)
+
+This allows you to install Cline CLI locally in your project directory instead of globally.
 
 ### Protocol Buffer Files
 
