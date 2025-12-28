@@ -13,7 +13,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def main():
-    with ClineInstance.with_available_ports() as instance:
+    # Example: Using local installation (recommended)
+    # To use global installation, remove the cline_path parameter
+    with ClineInstance.with_available_ports(cline_path="./node_modules/cline/cline-core.js") as instance:
         with grpc.insecure_channel(instance.address) as channel:
             response = task_pb2_grpc.TaskServiceStub(channel).newTask(NewTaskRequest(
                 metadata=Metadata(),

@@ -15,18 +15,116 @@ from cline_core.cline_instance import (
 
 
 class TestGetClineCorePath:
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_provided_path_absolute(self, mock_exists):
+        """Test finding cline-core.js with absolute path provided."""
+        mock_exists.return_value = True
+
+        path = get_cline_core_path("/custom/path/cline-core.js")
+
+        assert path == "/custom/path/cline-core.js"
+        mock_exists.assert_called_once_with("/custom/path/cline-core.js")
+
+    @patch('os.getcwd')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_provided_path_relative(self, mock_exists, mock_getcwd):
+        """Test finding cline-core.js with relative path provided."""
+        mock_getcwd.return_value = "/current/dir"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path("relative/path/cline-core.js")
+
+        assert path == "/current/dir/relative/path/cline-core.js"
+        mock_exists.assert_called_once_with("/current/dir/relative/path/cline-core.js")
+
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_provided_path_not_found(self, mock_exists):
+        """Test error when provided path doesn't exist."""
+        mock_exists.return_value = False
+
+        with pytest.raises(FileNotFoundError, match="cline-core.js not found at provided path"):
+            get_cline_core_path("/nonexistent/path/cline-core.js")
+
+    @patch('os.environ.get')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_env_var_absolute(self, mock_exists, mock_env_get):
+        """Test finding cline-core.js with absolute path from environment variable."""
+        mock_env_get.return_value = "/env/path/cline-core.js"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path()
+
+        assert path == "/env/path/cline-core.js"
+        mock_exists.assert_called_once_with("/env/path/cline-core.js")
+
+    @patch('os.getcwd')
+    @patch('os.environ.get')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_env_var_relative(self, mock_exists, mock_env_get, mock_getcwd):
+        """Test finding cline-core.js with relative path from environment variable."""
+        mock_env_get.return_value = "env/relative/cline-core.js"
+        mock_getcwd.return_value = "/current/dir"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path()
+
+        assert path == "/current/dir/env/relative/cline-core.js"
+        mock_exists.assert_called_once_with("/current/dir/env/relative/cline-core.js")
+
+    @patch('os.environ.get')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_env_var_not_found(self, mock_exists, mock_env_get):
+        """Test warning when environment variable path doesn't exist."""
+        mock_env_get.return_value = "/env/nonexistent/cline-core.js"
+        mock_exists.return_value = False
+
+        with pytest.raises(FileNotFoundError, match="cline-core.js not found"):
+            get_cline_core_path()
+
     @patch('subprocess.check_output')
     @patch('os.path.exists')
-    def test_get_cline_core_path_global_install(self, mock_exists, mock_check_output):
+    @patch('os.path.dirname')
+    def test_get_cline_core_path_with_path_search(self, mock_dirname, mock_exists, mock_check_output):
+        """Test finding cline-core.js by searching PATH for cline executable."""
+        mock_check_output.return_value = "/usr/local/bin/cline\n"
+        mock_dirname.return_value = "/usr/local/bin"
+        # First call to exists (for lib/node_modules path) returns False
+        # Second call (for direct path) returns True
+        mock_exists.side_effect = [False, True]
+
+        path = get_cline_core_path()
+
+        expected_path = "/usr/local/bin/cline-core.js"
+        assert path == expected_path
+        mock_check_output.assert_called_once_with(['which', 'cline'], text=True)
+
+    @patch('subprocess.check_output')
+    @patch('os.path.exists')
+    @patch('os.path.dirname')
+    def test_get_cline_core_path_with_path_search_lib_path(self, mock_dirname, mock_exists, mock_check_output):
+        """Test finding cline-core.js in lib/node_modules from PATH search."""
+        mock_check_output.return_value = "/usr/local/bin/cline\n"
+        mock_dirname.return_value = "/usr/local/bin"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path()
+
+        expected_path = "/usr/local/bin/../lib/node_modules/cline/cline-core.js"
+        assert path == expected_path
+
+    @patch('subprocess.check_output', side_effect=subprocess.CalledProcessError(1, 'which'))
+    @patch('subprocess.check_output')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_global_install(self, mock_exists, mock_check_output_global, mock_check_output_which):
         """Test finding cline-core.js in global node_modules."""
-        mock_check_output.return_value = "/usr/local/lib/node_modules\n"
+        mock_check_output_global.return_value = "/usr/local/lib/node_modules\n"
         mock_exists.return_value = True
 
         path = get_cline_core_path()
         expected = "/usr/local/lib/node_modules/cline/cline-core.js"
 
         assert path == expected
-        mock_check_output.assert_called_once_with(['npm', 'root', '-g'], text=True)
+        mock_check_output_global.assert_called_once_with(['npm', 'root', '-g'], text=True)
         mock_exists.assert_called_once_with(expected)
 
     @patch('subprocess.check_output', side_effect=subprocess.CalledProcessError(1, 'npm'))
@@ -111,6 +209,19 @@ class TestClineInstance:
         assert instance.cline_core_port == 9090
         assert instance.config_path == custom_config
         assert instance.cwd == custom_cwd
+
+    @patch('cline_core.cline_instance.get_cline_core_path')
+    @patch('cline_core.cline_instance.find_available_port_pair')
+    def test_with_available_ports_with_cline_path(self, mock_find_ports, mock_get_core_path):
+        """Test with_available_ports with cline_path parameter."""
+        mock_find_ports.return_value = (8080, 9090)
+        custom_cline_path = "/custom/path/cline-core.js"
+
+        instance = ClineInstance.with_available_ports(cline_path=custom_cline_path)
+
+        assert instance.cline_host_port == 8080
+        assert instance.cline_core_port == 9090
+        assert instance.cline_path == custom_cline_path
 
     def test_constructor(self):
         """Test ClineInstance constructor."""
