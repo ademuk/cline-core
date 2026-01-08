@@ -5,8 +5,15 @@ A python library to run cline core
 ## Installation
 
 Install Cline CLI which includes Cline Core. For more info visit: https://cline.bot/cline-cli
+
+**Global Installation (recommended for most users):**
 ```bash
-RUN npm install -g cline@1.0.8
+npm install -g cline@1.0.8
+```
+
+**Local Installation (project-specific):**
+```bash
+npm install cline@1.0.8
 ```
 
 Install this library
@@ -43,9 +50,45 @@ See `examples/example.py` for a complete example of creating and monitoring task
 - **stop()**: Terminates the processes
 - **wait_for_instance(timeout=30)**: Waits for instance lock in database
 - **is_running()**: Checks if processes are still running
-- **with_available_ports(cwd, config_path=None)**: Factory method for automatic port allocation
+- **with_available_ports(cwd=None, config_path=None, cline_path=None)**: Factory method for automatic port allocation
 
 Supports context manager protocol for automatic cleanup.
+
+#### Local Node Package Support
+
+By default, Cline Core looks for `cline-core.js` in globally installed npm packages. For local installations, you have several options:
+
+1. **Keyword Argument**: Pass `cline_path` to `with_available_ports()`
+   ```python
+   # Directory containing cline-core.js
+   instance = ClineInstance.with_available_ports(cline_path="/path/to/node_modules/cline")
+
+   # Direct path to cline-core.js
+   instance = ClineInstance.with_available_ports(cline_path="/path/to/cline-core.js")
+
+   # Path to cline executable (will find cline-core.js in same directory)
+   instance = ClineInstance.with_available_ports(cline_path="/path/to/cline")
+   ```
+
+2. **Environment Variable**: Set `CLINE_PATH` environment variable
+   ```bash
+   export CLINE_PATH="/path/to/node_modules/cline"
+   ```
+   Then use normally:
+   ```python
+   instance = ClineInstance.with_available_ports()
+   ```
+
+3. **PATH Search**: If `cline` executable is in your PATH, it will automatically find `cline-core.js` in the same directory
+   ```bash
+   export PATH="/path/to/cline/dir:$PATH"
+   ```
+   Then use normally:
+   ```python
+   instance = ClineInstance.with_available_ports()
+   ```
+
+The search order is: keyword argument → environment variable → PATH search → global npm install (fallback).
 
 ## Development
 

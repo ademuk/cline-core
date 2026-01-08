@@ -12,7 +12,64 @@ from typing import Optional, Tuple
 logger = logging.getLogger('cline_agent')
 
 
-def get_cline_core_path() -> str:
+def get_cline_core_path(cline_path: Optional[str] = None) -> str:
+    """
+    Find the path to cline-core.js.
+
+    Args:
+        cline_path: Optional path to cline executable or directory containing cline-core.js.
+                   If not provided, will try to find it automatically.
+
+    Returns:
+        Path to cline-core.js
+
+    Raises:
+        FileNotFoundError: If cline-core.js cannot be found
+    """
+    # 1. Check if path provided as keyword argument
+    if cline_path:
+        if os.path.isdir(cline_path):
+            # If directory provided, look for cline-core.js inside
+            candidate_path = os.path.join(cline_path, 'cline-core.js')
+            if os.path.exists(candidate_path):
+                logger.info(f"Using provided directory path: cline-core.js found at {candidate_path}")
+                return candidate_path
+        elif os.path.isfile(cline_path):
+            # If file provided, check if it's cline-core.js
+            if os.path.basename(cline_path) == 'cline-core.js':
+                logger.info(f"Using provided file path: {cline_path}")
+                return cline_path
+            # If it's the cline executable, look for cline-core.js in same directory
+            dirname = os.path.dirname(cline_path)
+            candidate_path = os.path.join(dirname, 'cline-core.js')
+            if os.path.exists(candidate_path):
+                logger.info(f"Using directory of provided executable: cline-core.js found at {candidate_path}")
+                return candidate_path
+        else:
+            raise FileNotFoundError(f"Provided cline_path does not exist: {cline_path}")
+
+    # 2. Check environment variable
+    env_cline_path = os.environ.get('CLINE_PATH')
+    if env_cline_path:
+        logger.info(f"Checking CLINE_PATH environment variable: {env_cline_path}")
+        try:
+            return get_cline_core_path(env_cline_path)
+        except FileNotFoundError:
+            logger.warning(f"CLINE_PATH environment variable points to invalid path: {env_cline_path}")
+
+    # 3. Check PATH for cline executable
+    try:
+        cline_executable = subprocess.check_output(['which', 'cline'], text=True).strip()
+        logger.info(f"Found cline executable in PATH: {cline_executable}")
+        dirname = os.path.dirname(cline_executable)
+        candidate_path = os.path.join(dirname, 'cline-core.js')
+        if os.path.exists(candidate_path):
+            logger.info(f"Using PATH executable directory: cline-core.js found at {candidate_path}")
+            return candidate_path
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        logger.debug(f"Could not find cline in PATH: {e}")
+
+    # 4. Fallback to global npm install (original behavior)
     try:
         global_npm_root = subprocess.check_output(['npm', 'root', '-g'], text=True).strip()
         global_cline_core_path = os.path.join(global_npm_root, 'cline', 'cline-core.js')
@@ -24,7 +81,8 @@ def get_cline_core_path() -> str:
             return global_cline_core_path
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
         logger.warning(f"Could not determine global npm root or check global path: {e}")
-        raise FileNotFoundError("cline-core.js not found in global node_modules. Make sure cline is installed globally with 'npm install -g cline'")
+
+    raise FileNotFoundError("cline-core.js not found. Make sure cline is installed globally with 'npm install -g cline', or provide a local path via CLINE_PATH environment variable or cline_path parameter")
 
 
 class InstanceLockNotFoundError(Exception):
@@ -54,17 +112,18 @@ def find_available_port_pair() -> Tuple[int, int]:
 
 class ClineInstance:
     @classmethod
-    def with_available_ports(cls, cwd: Optional[Path] = None, config_path: Optional[Path] = None) -> 'ClineInstance':
+    def with_available_ports(cls, cwd: Optional[Path] = None, config_path: Optional[Path] = None, cline_path: Optional[str] = None) -> 'ClineInstance':
         if cwd is None:
             cwd = Path.cwd()
         host_port, core_port = find_available_port_pair()
-        return cls(cline_host_port=host_port, cline_core_port=core_port, config_path=config_path, cwd=cwd)
+        return cls(cline_host_port=host_port, cline_core_port=core_port, config_path=config_path, cwd=cwd, cline_path=cline_path)
 
-    def __init__(self, cline_host_port: int, cline_core_port: int, config_path: Optional[Path], cwd: Path) -> None:
+    def __init__(self, cline_host_port: int, cline_core_port: int, config_path: Optional[Path], cwd: Path, cline_path: Optional[str] = None) -> None:
         self.cline_host_port = cline_host_port
         self.cline_core_port = cline_core_port
         self.config_path = config_path if config_path is not None else Path.home() / ".cline"
         self.cwd = cwd
+        self.cline_path = cline_path
         self.host_process: Optional[subprocess.Popen[str]] = None
         self.core_process: Optional[subprocess.Popen[str]] = None
 
@@ -77,7 +136,7 @@ class ClineInstance:
             cwd=self.cwd
         )
 
-        cline_core_path = get_cline_core_path()
+        cline_core_path = get_cline_core_path(self.cline_path)
 
         real_node_modules = os.path.join(os.path.dirname(cline_core_path), "node_modules")
         fake_node_modules = os.path.join(os.path.dirname(cline_core_path), "fake_node_modules")
