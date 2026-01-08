@@ -90,6 +90,8 @@ By default, Cline Core looks for `cline-core.js` in globally installed npm packa
 
 The search order is: keyword argument → environment variable → PATH search → global npm install (fallback).
 
+## Development
+
 ### Protocol Buffer Files
 
 The library includes gRPC protocol buffer definitions and generated Python files for communicating with Cline's gRPC services. These files are located in `src/cline/proto/` and include:
@@ -106,8 +108,6 @@ To manually regenerate these files during development:
 ```bash
 uv run build.py
 ```
-
-## Development
 
 This project uses uv for package management and development.
 
