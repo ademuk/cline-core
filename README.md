@@ -47,6 +47,8 @@ See `examples/example.py` for a complete example of creating and monitoring task
 
 Supports context manager protocol for automatic cleanup.
 
+## Development
+
 ### Protocol Buffer Files
 
 The library includes gRPC protocol buffer definitions and generated Python files for communicating with Cline's gRPC services. These files are located in `src/cline/proto/` and include:
@@ -63,8 +65,6 @@ To manually regenerate these files during development:
 ```bash
 uv run build.py
 ```
-
-## Development
 
 This project uses uv for package management and development.
 
