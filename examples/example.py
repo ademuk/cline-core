@@ -1,6 +1,6 @@
 import asyncio
 import logging
-import grpc
+import grpc.aio as grpc_aio
 
 from cline_core import ClineInstance
 from cline_core.proto.cline.common_pb2 import Metadata
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 async def main():
     with ClineInstance.with_available_ports() as instance:
-        with grpc.insecure_channel(instance.address) as channel:
-            response = task_pb2_grpc.TaskServiceStub(channel).newTask(NewTaskRequest(
+        async with grpc_aio.insecure_channel(instance.address) as channel:
+            response = await task_pb2_grpc.TaskServiceStub(channel).newTask(NewTaskRequest(
                 metadata=Metadata(),
                 text="Create a simple hello world Python script and save it as hello.py",
                 task_settings=Settings(
