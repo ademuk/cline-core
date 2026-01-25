@@ -31,6 +31,7 @@ def generate_grpc_stubs():
         "--proto_path=" + proto_path,
         "--python_out=" + output_path,
         "--grpc_python_out=" + output_path,
+        "--pyi_out=" + output_path,
     ] + proto_files
 
     return run_command(command) == 0
