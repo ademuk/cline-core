@@ -17,17 +17,103 @@ from cline_core.cline_instance import (
 class TestGetClineCorePath:
     @patch('subprocess.check_output')
     @patch('os.path.exists')
-    def test_get_cline_core_path_global_install(self, mock_exists, mock_check_output):
+    @patch('os.environ.get', return_value=None)
+    def test_get_cline_core_path_global_install(self, mock_environ_get, mock_exists, mock_check_output):
         """Test finding cline-core.js in global node_modules."""
-        mock_check_output.return_value = "/usr/local/lib/node_modules\n"
+        def check_output_side_effect(cmd, **kwargs):
+            if cmd == ['which', 'cline']:
+                raise subprocess.CalledProcessError(1, 'which')
+            elif cmd == ['npm', 'root', '-g']:
+                return "/usr/local/lib/node_modules\n"
+            else:
+                raise ValueError(f"Unexpected command: {cmd}")
+
+        mock_check_output.side_effect = check_output_side_effect
         mock_exists.return_value = True
 
         path = get_cline_core_path()
         expected = "/usr/local/lib/node_modules/cline/cline-core.js"
 
         assert path == expected
-        mock_check_output.assert_called_once_with(['npm', 'root', '-g'], text=True)
+        mock_check_output.assert_called_with(['npm', 'root', '-g'], text=True)
         mock_exists.assert_called_once_with(expected)
+
+    @patch('os.path.isdir')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_directory_argument(self, mock_exists, mock_isdir):
+        """Test providing directory path as argument."""
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+
+        path = get_cline_core_path("/path/to/cline/dir")
+        expected = "/path/to/cline/dir/cline-core.js"
+
+        assert path == expected
+
+    @patch('os.path.isfile')
+    @patch('os.path.basename')
+    @patch('os.path.exists')
+    def test_get_cline_core_path_with_file_argument(self, mock_exists, mock_basename, mock_isfile):
+        """Test providing cline-core.js file path as argument."""
+        mock_isfile.return_value = True
+        mock_basename.return_value = "cline-core.js"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path("/path/to/cline-core.js")
+
+        assert path == "/path/to/cline-core.js"
+
+    @patch('os.path.isfile')
+    @patch('os.path.dirname')
+    @patch('os.path.basename')
+    @patch('os.path.exists')
+    @patch('os.path.join')
+    def test_get_cline_core_path_with_executable_argument(self, mock_join, mock_exists, mock_basename, mock_dirname, mock_isfile):
+        """Test providing cline executable path as argument."""
+        mock_isfile.return_value = True
+        mock_basename.return_value = "cline"
+        mock_dirname.return_value = "/path/to"
+        mock_join.return_value = "/path/to/cline-core.js"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path("/path/to/cline")
+
+        assert path == "/path/to/cline-core.js"
+
+    def test_get_cline_core_path_invalid_argument(self):
+        """Test providing invalid path as argument."""
+        with pytest.raises(FileNotFoundError, match="Provided cline_path does not exist"):
+            get_cline_core_path("/nonexistent/path")
+
+    @patch.dict('os.environ', {'CLINE_PATH': '/env/path/to/cline'})
+    @patch('os.path.isdir')
+    @patch('os.path.exists')
+    @patch('subprocess.check_output', side_effect=subprocess.CalledProcessError(1, 'npm'))
+    def test_get_cline_core_path_environment_variable(self, mock_check_output, mock_exists, mock_isdir):
+        """Test using CLINE_PATH environment variable."""
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+
+        path = get_cline_core_path()
+        expected = "/env/path/to/cline/cline-core.js"
+
+        assert path == expected
+
+    @patch('subprocess.check_output')
+    @patch('os.path.dirname')
+    @patch('os.path.exists')
+    @patch('os.environ.get', return_value=None)
+    def test_get_cline_core_path_from_path(self, mock_environ_get, mock_exists, mock_dirname, mock_check_output):
+        """Test finding cline-core.js via PATH."""
+        mock_check_output.return_value = "/usr/bin/cline\n"
+        mock_dirname.return_value = "/usr/bin"
+        mock_exists.return_value = True
+
+        path = get_cline_core_path()
+        expected = "/usr/bin/cline-core.js"
+
+        assert path == expected
+        mock_check_output.assert_called_with(['which', 'cline'], text=True)
 
     @patch('subprocess.check_output', side_effect=subprocess.CalledProcessError(1, 'npm'))
     def test_get_cline_core_path_no_global_install(self, mock_check_output):
